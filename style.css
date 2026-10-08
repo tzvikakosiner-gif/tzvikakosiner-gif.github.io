@@ -17,3 +17,5 @@
 
 .file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;min-height:0;padding:0;border:0}.add-file:focus-within{outline:3px solid var(--slate)}
 .link-text small{display:block;font-size:12px;font-weight:400;color:var(--muted);line-height:1.7;margin-top:8px}.visa-note{padding:12px 14px;border-radius:12px;background:#fff5e8;font-size:12px;line-height:1.7}
+
+.upload-notice{margin:18px 0;padding:16px 18px;border:1px solid #cbd4c2;border-radius:12px;background:#f4f7ef;line-height:1.65}.upload-notice strong{font-size:17px}.upload-notice p{margin:6px 0 0;font-size:14px}

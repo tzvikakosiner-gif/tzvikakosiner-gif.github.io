@@ -7,13 +7,36 @@ function documentsDB(){return dbPromise??=new Promise((resolve,reject)=>{const r
 async function allDocuments(){const db=await documentsDB();return new Promise((resolve,reject)=>{const tx=db.transaction('files','readonly'),r=tx.objectStore('files').getAll();tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});}
 function mutateDocument(record,remove=false){return documentsDB().then(db=>new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite'),store=tx.objectStore('files');if(remove)store.delete(record.id);else{const r=store.getAll();r.onsuccess=()=>{if(r.result.reduce((s,x)=>s+x.size,0)+record.size>MAX_TOTAL){tx.abort();return;}store.add(record)}}tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('quota'))}));}
 const bytesLabel=n=>n<1000000?new Intl.NumberFormat(LANGUAGES[language].locale,{maximumFractionDigits:1}).format(n/1000)+' KB':new Intl.NumberFormat(LANGUAGES[language].locale,{maximumFractionDigits:2}).format(n/1000000)+' MB';
-async function fileKind(file){const b=new Uint8Array(await file.slice(0,8).arrayBuffer());if(b[0]===37&&b[1]===80&&b[2]===68&&b[3]===70&&b[4]===45)return'application/pdf';if(b[0]===255&&b[1]===216&&b[2]===255)return'image/jpeg';if([137,80,78,71,13,10,26,10].every((x,i)=>b[i]===x))return'image/png';return null;}
+// Basic format screening only, not a malware scan or full Office parser.
+async function fileKind(file){
+ const b=new Uint8Array(await file.slice(0,8).arrayBuffer());
+ if(b[0]===37&&b[1]===80&&b[2]===68&&b[3]===70&&b[4]===45)return'application/pdf';
+ if(b[0]===255&&b[1]===216&&b[2]===255)return'image/jpeg';
+ if([137,80,78,71,13,10,26,10].every((x,i)=>b[i]===x))return'image/png';
+ const ext=file.name.toLowerCase().split('.').pop(),types={doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+ if(!types[ext])return null;
+ if(ext==='doc'||ext==='xls')return file.size>=512&&[208,207,17,224,161,177,26,225].every((x,i)=>b[i]===x)?types[ext]:null;
+ if(b[0]!==80||b[1]!==75||b[2]!==3||b[3]!==4)return null;
+ const bytes=new Uint8Array(await file.arrayBuffer()),v=new DataView(bytes.buffer),names=[];let end=-1;
+ for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)if(v.getUint32(i,true)===0x06054b50&&i+22+v.getUint16(i+20,true)===bytes.length){end=i;break}
+ if(end<0)return null;
+ const count=v.getUint16(end+10,true);let at=v.getUint32(end+16,true);const limit=at+v.getUint32(end+12,true);
+ if(count>10000||limit>end)return null;
+ for(let i=0;i<count;i++){
+  if(at+46>limit||v.getUint32(at,true)!==0x02014b50)return null;
+  const n=v.getUint16(at+28,true),extra=v.getUint16(at+30,true),comment=v.getUint16(at+32,true),next=at+46+n+extra+comment;
+  if(next>limit)return null;
+  names.push(new TextDecoder().decode(bytes.subarray(at+46,at+46+n)));at=next;
+ }
+ return names.includes('[Content_Types].xml')&&names.includes(ext==='docx'?'word/document.xml':'xl/workbook.xml')?types[ext]:null;
+}
+function downloadDocument(d){const url=URL.createObjectURL(d.blob),a=document.createElement('a');a.href=url;a.download=d.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)}
 async function renderDocuments(tripId,messageKey=''){
- const token=++docRender,panel=$('trip-panel');panel.innerHTML=`<h2>${tr('documents')}</h2><div class="doc-note">${tr('docNote')}</div><p class="field-help">${tr('caps')}</p><label class="primary add-file" tabindex="0" role="button" for="doc-input">${tr('addFile')}</label><input id="doc-input" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" class="file-input"><p id="doc-message" role="status">${tr('loading')}</p><p class="field-help" id="doc-usage"></p><div id="doc-list"></div>`;
+ const token=++docRender,panel=$('trip-panel');panel.innerHTML=`<h2>${tr('documents')}</h2><div class="doc-note">${tr('docNote')}</div><aside class="upload-notice"><strong>${tr('uploadNotice')}</strong><p>${tr('uploadEstimate')}</p></aside><p class="field-help">${tr('caps')}</p><p class="field-help">${tr('officeOpen')}</p><label class="primary add-file" tabindex="0" role="button" for="doc-input">${tr('addFile')}</label><input id="doc-input" type="file" accept="application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" class="file-input"><p id="doc-message" role="status">${tr('loading')}</p><p class="field-help" id="doc-usage"></p><div id="doc-list"></div>`;
  const input=$('doc-input');panel.querySelector('.add-file').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}};input.disabled=docBusy;input.onchange=async()=>{const f=input.files[0];input.value='';if(!f)return;docBusy=true;input.disabled=true;const status=k=>{if($('doc-message'))$('doc-message').textContent=tr(k)};status('savingFile');let result='';try{if(!f.size)result='emptyFile';else if(f.size>MAX_FILE)result='fileBig';else{const type=await fileKind(f);if(!type)result='fileType';else{const all=await allDocuments();if(all.reduce((s,x)=>s+x.size,0)+f.size>MAX_TOTAL)result='totalBig';else{let estimate=null;try{estimate=await navigator.storage?.estimate?.()}catch(e){}if(estimate&&Number.isFinite(estimate.quota)&&Number.isFinite(estimate.usage)&&estimate.quota-estimate.usage<f.size)result='spaceLow';else{if(!estimate)status('spaceUnknown');await mutateDocument({id:crypto.randomUUID(),tripId,name:f.name,type,size:f.size,blob:f.slice(0,f.size,type),addedAt:Date.now()});result='fileSaved'}}}}}catch(e){result='saveFail'}finally{docBusy=false;if(screen==='trip'&&tripTab==='documents'&&currentTrip?.id===tripId)await renderDocuments(tripId,result)}};
  try{const all=await allDocuments();if(token!==docRender||screen!=='trip'||tripTab!=='documents'||currentTrip.id!==tripId)return;$('doc-message').textContent=messageKey?tr(messageKey):'';$('doc-usage').textContent=tr('usage',{used:bytesLabel(all.reduce((s,x)=>s+x.size,0))});const mine=all.filter(d=>d.tripId===tripId);$('doc-list').innerHTML=mine.length?mine.map(d=>`<article class="doc-card"><div><h3>${esc(d.name)}</h3><p>${esc(d.type)} · ${bytesLabel(d.size)}</p></div><div class="doc-actions"><button class="quiet" data-open="${d.id}">${tr('open')}</button><button class="quiet" data-download="${d.id}">${tr('download')}</button><button class="quiet delete-file" data-delete="${d.id}">${tr('delete')}</button></div></article>`).join(''):`<p class="intro">${tr('noDocs')}</p>`;
- panel.querySelectorAll('[data-open]').forEach(btn=>btn.onclick=()=>{const d=mine.find(d=>d.id===btn.dataset.open),url=URL.createObjectURL(d.blob);const w=window.open(url,'_blank');if(w)w.opener=null;else $('doc-message').textContent=tr('openFail');setTimeout(()=>URL.revokeObjectURL(url),600000)});
- panel.querySelectorAll('[data-download]').forEach(btn=>btn.onclick=()=>{const d=mine.find(d=>d.id===btn.dataset.download),url=URL.createObjectURL(d.blob),a=document.createElement('a');a.href=url;a.download=d.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)});
+ panel.querySelectorAll('[data-open]').forEach(btn=>btn.onclick=()=>{const d=mine.find(d=>d.id===btn.dataset.open);if(!['application/pdf','image/jpeg','image/png'].includes(d.type)){downloadDocument(d);return}const url=URL.createObjectURL(d.blob);const w=window.open(url,'_blank');if(w)w.opener=null;else $('doc-message').textContent=tr('openFail');setTimeout(()=>URL.revokeObjectURL(url),600000)});
+ panel.querySelectorAll('[data-download]').forEach(btn=>btn.onclick=()=>{downloadDocument(mine.find(d=>d.id===btn.dataset.download))});
  panel.querySelectorAll('[data-delete]').forEach(btn=>btn.onclick=()=>confirmDelete(mine.find(d=>d.id===btn.dataset.delete),tripId));
  }catch(e){if(token===docRender&&$('doc-message')){$('doc-message').textContent=tr('docFail');input.disabled=true}}
 }
