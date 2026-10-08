@@ -1,43 +1,36 @@
-# Vellvia local trip planner
+# Vellvia v7 - local review build (NOT published)
 
+Static Hebrew/English travel planner. No external runtime dependencies.
 Serve this folder with a static server or open index.html in Chrome.
-Zero runtime dependencies, external requests, cloud services or costs.
+Approved v6 globe entrance and bilingual button are preserved.
 
-Entrance and button design remain from the approved previous version.
-Create a trip using any destination and a start/end date. A day is created for
-all dates inclusive. Each day has editable place and notes fields.
-Trips and day edits save immediately to localStorage on this browser only.
-Reopen the trip from the trip list. No starter trips are included.
-Dates support 1900-2200 with a maximum 366 days per trip.
+Trip data uses vellvia.trips.v1 in localStorage. Language uses vellvia.language.v1.
+The sticky "Back to trips" control is clearer and visible during scroll.
+There is no browser-history routing. Back to welcome is unchanged.
+Each trip now has Itinerary, Useful links and Documents panels.
+All app-owned text is in i18n.js; user text is never auto-translated.
 
-No login, private accounts, cloud synchronization, invitations or sharing.
-Anyone using the same browser profile can read these local trips.
-Clearing browser data removes the trips. No automatic backup.
-Do not use this version for sensitive documents, ticket numbers or secrets.
-Storage failures are shown and leave current edits in memory only.
-No documents/upload feature is provided yet.
+Documents store actual PDF/JPG/PNG blobs in IndexedDB, database
+vellvia.documents.v1. The product limit is 10,000,000 bytes per file and
+50,000,000 bytes across every trip. A basic file-header/type check is used.
+This is not antivirus scanning or encrypted storage. Confirmation of saving
+happens only after the IndexedDB transaction completes. Size/quota/write failures
+are handled visibly. Estimated free space is checked when the browser supports
+it. If unavailable, the save transaction remains authoritative.
+Files can open in a new tab, download, or be deleted after confirmation.
+Keep original files: clearing site data, private browsing, storage eviction or
+switching browsers/devices/domains can lose access. No cloud/sync/sharing/backup.
+Anyone using the browser profile can see the data. Not a vault for secrets.
 
-The preview screenshots/video use a fictitious Japan trip to demonstrate the
-flow. These demonstration records are not included in this source archive.
-The SVG logo is reconstructed from the supplied reference, not its lost master.
-Nothing has been pushed or published. No credentials are included.
+Useful links do not send trip destination/date data and have no assumed origin.
+No affiliate tags are added. Provider services can charge even though this site
+has no service cost. Before-trip passport link intentionally leads to the
+Population Authority homepage with its "passport application" entry: the older
+apply_for_passport deep URL currently redirects to an error. Google's Android
+eSIM guide is specifically for Pixel; other Android devices can differ.
+Lupa photo albums are After the trip, not lodging. No automatic payments.
 
-## Languages (v5)
-Hebrew is the default, with English selectable on welcome and inside the app.
-The preference is saved separately at vellvia.language.v1.
-All app-owned strings and accessibility labels are in i18n.js.
-To add a language, add a LANGUAGES entry with dir, locale, name and text values.
-Missing keys fall back to Hebrew. Dates/weekday names use the selected locale.
-Native date input controls still use the browser/operating system date format.
-Trip names, places and notes are user data and are not translated.
-Switching languages preserves unfinished form fields and stored trips.
-The fixed 120x44 entrance button runs a 12-second Hebrew/English letter dissolve
-loop using "מתחילים מסע" and "Start your journey". Reduced-motion users get a
-static label in the selected language. Entrance artwork does not mirror.
-
-## Full entrance preview (v6)
-The original globe-targeted zoom is retained and tested from a real enter click.
-Full preview videos show one bilingual loop, a click, the globe zoom, then home.
-Language picker fades with the entrance controls during zoom.
-Reset clears the flash and restores the language picker on returning to welcome.
-No destination-name auto-translation has been added.
+No seeded trips or files. Demo records exist only in temporary preview browsers.
+No account/authentication backend or document uploads to GitHub/server.
+No destination-name dictionary or automatic destination translation.
+Current review build is local only. Published site remains v6 until authorized.
