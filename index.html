@@ -1,36 +1,4 @@
-<!doctype html>
-<html lang="he" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light">
-<title>Lunavia - מרכז הטיולים</title>
-<meta name="description" content="מרכז טיולים אישי: מסלולים, מסמכים וקישורי הזמנה במקום אחד.">
-<link rel="stylesheet" href="main.css">
-<script>
-(function(){
-  var current = decodeURIComponent(location.hash.slice(1) || '/');
-  window.instinctFile = Object.freeze({
-    initialRoute: current,
-    route: function(path){
-      if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) return;
-      if (path === current) return;
-      current = path;
-      location.hash = encodeURIComponent(path);
-      window.dispatchEvent(new CustomEvent('instinct-route', {detail: path}));
-    },
-    asset: function(p){ return p; },
-    request: function(){ return Promise.resolve({status:'unknown'}); }
-  });
-  window.addEventListener('hashchange', function(){
-    var p = decodeURIComponent(location.hash.slice(1) || '/');
-    if (p !== current) { current = p; window.dispatchEvent(new CustomEvent('instinct-route', {detail: p})); }
-  });
-})();
-</script>
-</head>
-<body>
-<div id="root"></div>
-<script src="main.js"></script>
-</body>
-</html>
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Vellvia</title><link rel="icon" href="assets/favicon.png"><link rel="stylesheet" href="style.css"></head><body>
+<div id="entrance" aria-label="מסך הכניסה ל-Vellvia"><select class="language-picker entrance-language" aria-label="בחירת שפה"></select><div class="sky"></div><div class="world" id="world"><div class="islands" id="entrance-islands"></div><div class="identity" id="identity"><button class="globe" id="globe" aria-label="כניסה לתצוגת האתר"><img src="assets/globe.svg" alt=""></button><img id="route" class="route" src="assets/route.png" alt=""><img class="wordmark" src="assets/wordmark.svg" alt="Vellvia"></div></div><div class="entry-action" id="entry-action"><button class="primary" id="enter" aria-label="נכנסים למסע"><span class="entry-label" aria-hidden="true"></span><span class="entry-arrow" aria-hidden="true">←</span></button><small data-i18n="local">גרסה מקומית · ללא חשבון או התחברות</small></div></div>
+<div id="landing" hidden><div class="sky"></div><div class="interior-islands" id="interior-islands" aria-hidden="true"></div><div class="app" id="app"><header><img src="assets/wordmark.svg" alt="Vellvia"><div class="header-actions"><select class="language-picker" aria-label="בחירת שפה"></select><button class="quiet" id="back"><span data-i18n="back">חזרה לכניסה</span> <span aria-hidden="true">↗</span></button></div></header><main id="trip-main"></main><footer>Vellvia · <span data-i18n="footer">הטיולים נשמרים בדפדפן הזה בלבד</span></footer></div></div>
+<div id="flash" aria-hidden="true"></div><script src="i18n.js"></script><script src="app.js"></script></body></html>
