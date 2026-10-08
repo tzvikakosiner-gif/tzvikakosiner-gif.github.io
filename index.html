@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Lunavia - מרכז הטיולים</title>
+<meta name="description" content="מרכז טיולים אישי: מסלולים, מסמכים וקישורי הזמנה במקום אחד.">
+<link rel="stylesheet" href="main.css">
+<script>
+(function(){
+  var current = decodeURIComponent(location.hash.slice(1) || '/');
+  window.instinctFile = Object.freeze({
+    initialRoute: current,
+    route: function(path){
+      if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) return;
+      if (path === current) return;
+      current = path;
+      location.hash = encodeURIComponent(path);
+      window.dispatchEvent(new CustomEvent('instinct-route', {detail: path}));
+    },
+    asset: function(p){ return p; },
+    request: function(){ return Promise.resolve({status:'unknown'}); }
+  });
+  window.addEventListener('hashchange', function(){
+    var p = decodeURIComponent(location.hash.slice(1) || '/');
+    if (p !== current) { current = p; window.dispatchEvent(new CustomEvent('instinct-route', {detail: p})); }
+  });
+})();
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script src="main.js"></script>
+</body>
+</html>
